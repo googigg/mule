@@ -47,6 +47,9 @@ http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/cu
             <when expression="#[message.inboundProperties.'http.uri.params'.inpath == 'decisionSubFlow']">
                 <flow-ref name="decisionSubFlow" doc:name="decisionSubFlow"/>
             </when>
+            <when expression="#[message.inboundProperties.'http.uri.params'.inpath == 'wsdlSubFlow']">
+                <flow-ref name="workingWithWSDLSubFlow" doc:name="workingWithWSDLSubFlow"/>
+            </when>
             <when expression="#[message.inboundProperties.'http.uri.params'.inpath == 'transactionInquiry']">
                 <flow-ref name="account-txn-inquiry-subflow" doc:name="account-txn-inquiry-subflow"/>
             </when>
@@ -88,7 +91,8 @@ http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/cu
             </otherwise>
         </choice>
     </sub-flow>
-    <sub-flow name="account-txn-inquiry-subflow">
+    
+    <sub-flow name="workingWithWSDLSubFlow">
         <logger message="account-txn-inquiry-subflow begin ...." level="INFO" doc:name="Logger"/>
         <logger message="#['client_id is ' + message.inboundProperties.'http.query.params'.client_id]" level="INFO" doc:name="client_id Logger"/>
         <logger message="#['client_secret is ' + message.inboundProperties.'http.query.params'.client_secret]" level="INFO" doc:name="client_secret Logger"/>
@@ -111,7 +115,30 @@ http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/cu
 	&lt;CountryName&gt;Thailand&lt;/CountryName&gt;
 &lt;/GetCitiesByCountry&gt;" doc:name="Set Payload"/>
         <ws:consumer config-ref="GlobalWeather_Web_Service_Consumer" operation="GetCitiesByCountry" doc:name="Web Service Consumer"/>
-        <json:xml-to-json-transformer doc:name="XML to JSON"/>
+
+        <logger message="#['transformed to ' + payload]" level="INFO" doc:name="Logger"/>
+    </sub-flow>
+    
+    <sub-flow name="account-txn-inquiry-subflow">
+        <logger message="account-txn-inquiry-subflow begin ...." level="INFO" doc:name="Logger"/>
+        <logger message="#['client_id is ' + message.inboundProperties.'http.query.params'.client_id]" level="INFO" doc:name="client_id Logger"/>
+        <logger message="#['client_secret is ' + message.inboundProperties.'http.query.params'.client_secret]" level="INFO" doc:name="client_secret Logger"/>
+        <logger message="#['request body is ' + payload]" level="INFO" doc:name="payload Logger"/>
+        <set-variable variableName="customerRequest" value="" doc:name="Set Customer Request"/>
+        
+                <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://bso.tisconet.com/AccountInquiryService/
+---
+{
+	ns0#inquiryTransaction: {
+		channelType:payload.data.customer_requester_info.service_caller,
+		channelType:payload.data.customer_requester_info.channel_type
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+
         <logger message="#['transformed to ' + payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
 </mule>
